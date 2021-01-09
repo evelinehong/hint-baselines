@@ -12,7 +12,9 @@ from torch.utils.data.dataloader import default_collate
 DIGITS= [str(i) for i in range(0, 10)]
 NULL = '<NULL>'
 SYMBOLS = DIGITS + ['s'] + ['e'] + [NULL]
+SYMBOLS_AND_OPS = SYMBOLS + ['+'] + ['-'] + ['*'] + ['/'] + ['!'] + ['('] + [')']
 SYM2ID = lambda x: SYMBOLS.index(x)
+SYMOP2ID = lambda x: SYMBOLS_AND_OPS.index(x)
 
 class HINT(Dataset):
     def __init__(self, split='train', n_sample_zero_res=None):
@@ -65,8 +67,12 @@ class HINT(Dataset):
         label_seq = str(sample['res'])
         label_list = [SYM2ID(x) for x in label_seq]
         label_list = [SYM2ID('s')] + label_list + [SYM2ID('e')]
+        expr_seq = str(sample['expr'])
+        expr_list = [SYMOP2ID(x) for x in expr_seq]
+        expr_list = [SYMOP2ID('s')] + expr_list + [SYMOP2ID('e')]
         item['img_seq'] = img_seq
         item['label_seq'] = label_list
+        item['expr_seq'] = expr_list
         item['res'] = sample['res']
         item['len'] = sample['len']
         return item
@@ -77,15 +83,19 @@ class HINT(Dataset):
 
 def HINT_collate(batch):
     max_len_i = np.max([x['len'] for x in batch])
-    max_len_o = np.max([len(str(x['res'])) for x in batch])
+    max_len_o = np.max([len(x['label_seq']) for x in batch])
+    max_len_e = np.max([len(x['expr_seq']) for x in batch])
     zero_img = torch.zeros_like(batch[0]['img_seq'][0])
 
     for sample in batch:
         sample['img_seq'] += [zero_img] * (max_len_i - sample['len'])
         sample['img_seq'] = torch.stack(sample['img_seq'])
 
-        sample['label_seq'] += [SYM2ID(NULL)] * (max_len_o - len(str(sample['res'])))
+        sample['label_seq'] += [SYM2ID(NULL)] * (max_len_o - len(sample['label_seq']))
         sample['label_seq'] = torch.tensor(sample['label_seq'])
+
+        sample['expr_seq'] += [SYMOP2ID(NULL)] * (max_len_e - len(sample['expr_seq']))
+        sample['expr_seq'] = torch.tensor(sample['expr_seq'])      
         
     batch = default_collate(batch)
 
