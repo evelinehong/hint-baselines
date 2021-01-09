@@ -4,3 +4,6 @@
 *.pyc
 *.json
 *.jpg
+*.xz
+cnn-transformer-relative-position/relative_position.py
+lenet-transformer-relative-position/relative_position.py
